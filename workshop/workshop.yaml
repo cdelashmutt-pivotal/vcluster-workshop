@@ -1,0 +1,8 @@
+name: A workshop to show how to use vClusters in Learning Center
+
+modules:
+    activate:
+    - workshop-overview
+    - setup-environment
+    - exercises/01-sample-content
+    - workshop-summary

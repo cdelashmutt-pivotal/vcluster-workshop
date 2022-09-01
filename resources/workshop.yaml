@@ -1,0 +1,73 @@
+apiVersion: learningcenter.tanzu.vmware.com/v1beta1
+kind: Workshop
+metadata:
+  name: vcluster-workshop
+spec:
+  title: A workshop to show how to use vClusters in Learning Center
+  description: Need to create cluster level resources without having to deal with adding session namespace names to every cluster-level object?  This workshop starter is for you!
+  vendor: eduk8s.io
+  difficulty: beginner
+  duration: 15m
+  url: https://github.com/cdelashmutt-pivotal/vcluster-workshop
+  content:
+    #image: 
+    files: github.com/cdelashmutt-pivotal/vcluster-workshop
+  session:
+    namespaces:
+      budget: small
+    applications:
+      terminal:
+        enabled: true
+        layout: split
+      editor:
+        enabled: true
+    objects:
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: $(session_namespace)-vcluster-values
+        namespace: $(workshop_namespace)
+      data:
+        values.yml: |
+          serviceCIDR: 100.64.0.0/13
+    - apiVersion: kappctrl.k14s.io/v1alpha1
+      kind: App
+      metadata:
+        name: $(session_namespace)-vcluster
+        namespace: $(workshop_namespace)
+      spec:
+        # Try to keep kapp-controller from reconciling the vcluster deployment
+        syncPeriod: 2d
+        # Just let LearningCenter delete the cluster
+        noopDelete: true
+        serviceAccountName: $(service_account)
+        fetch:
+        - helmChart:
+            name: vcluster
+            version: 0.11.2
+            repository:
+              url: https://charts.loft.sh
+        template:
+        - helmTemplate:
+            namespace: $(session_namespace)
+            valuesFrom:
+            - configMapRef:
+                name: $(session_namespace)-vcluster-values
+        - ytt:
+            ignoreUnknownComments: true
+            inline:
+              paths:
+                add-pvc-annotation.yml: |
+                  #@ load("@ytt:overlay", "overlay")
+                  #@overlay/match by=overlay.subset({"kind":"StatefulSet", "metadata":{"name":"my-vcluster"}}), expects=1
+                  ---
+                  spec:
+                    volumeClaimTemplates:
+                      #@overlay/match by=overlay.index(0)
+                      - metadata:
+                          name: data
+                          #@overlay/match missing_ok=True
+                          annotations:
+                            kapp.k14s.io/owned-for-deletion: ""                  
+        deploy:
+        - kapp: {}

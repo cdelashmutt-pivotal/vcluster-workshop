@@ -1,0 +1,13 @@
+apiVersion: learningcenter.tanzu.vmware.com/v1beta1
+kind: TrainingPortal
+metadata:
+  name: vcluster-workshop
+spec:
+  portal:
+    registration:
+      type: anonymous
+  workshops:
+  - name: vcluster-workshop
+    capacity: 1
+    expires: 60m
+    orphaned: 5m
